@@ -162,7 +162,7 @@ function renderTools() {
 
     mount.innerHTML = `
         <div class="ui-tools-section">
-            <h2 class="ui-h2">Рабочие инструменты</h2>
+            <h2 class="ui-h2">Инструменты</h2>
             <div class="ui-tools-tray">
                 ${tools.map(tool => `
                     <img class="ui-tool-icon" src="${tool.icon}" alt="${tool.name}" width="48" height="48">
