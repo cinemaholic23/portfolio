@@ -75,6 +75,8 @@ const tools = [
     { name: 'Mobbin', icon: 'assets/tools/mobbin.svg?v=3' },
 ];
 
+let pendingProjectsRender = false;
+
 // ============================================================
 // renderNav — injects sticky nav + contact popover
 // Detects current page by filename to set is-active correctly
@@ -373,6 +375,10 @@ function closeCaseViewer(viewer, card) {
     if (!mediaShell || !sourceMedia) {
         viewer.remove();
         document.body.classList.remove('case-viewer-open');
+        if (pendingProjectsRender) {
+            pendingProjectsRender = false;
+            renderProjects();
+        }
         return;
     }
 
@@ -412,6 +418,10 @@ function closeCaseViewer(viewer, card) {
     mediaAnimation.addEventListener('finish', () => {
         viewer.remove();
         document.body.classList.remove('case-viewer-open');
+        if (pendingProjectsRender) {
+            pendingProjectsRender = false;
+            renderProjects();
+        }
         card.focus();
     }, { once: true });
 }
@@ -437,6 +447,24 @@ function bindCaseViewer() {
     });
 }
 
+function bindProjectsBreakpoint() {
+    const breakpoint = window.matchMedia('(min-width: 700px)');
+    const handleBreakpointChange = () => {
+        if (document.querySelector('.case-viewer')) {
+            pendingProjectsRender = true;
+            return;
+        }
+
+        renderProjects();
+    };
+
+    if (breakpoint.addEventListener) {
+        breakpoint.addEventListener('change', handleBreakpointChange);
+    } else {
+        breakpoint.addListener(handleBreakpointChange);
+    }
+}
+
 // ============================================================
 // Boot
 // ============================================================
@@ -449,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderFooter();
     bindHeroLinks();
     bindCaseViewer();
+    bindProjectsBreakpoint();
 
     // Contact Popover — runs after renderNav() so element exists
     const popover = document.getElementById('contact-popover');
@@ -465,7 +494,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.addEventListener('resize', () => {
-        if (!document.querySelector('.case-viewer')) renderProjects();
-    });
 });
