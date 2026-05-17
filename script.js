@@ -16,25 +16,26 @@ function getContactUrl(label) {
 // ============================================================
 const projects = [
     {
-        title: 'SaaS Dashboard',
-        subline: 'Проектирование сложной аналитической системы',
-        image: 'assets/case-1.png',
-        mediaType: 'image',
+        title: 'Ссылка для кандидата',
+        subline: 'Яндекс Эйчартех 2025',
+        image: 'assets/case-link-candidate.mp4',
+        mediaType: 'video',
         height: '400px'
     },
     {
-        title: 'Fintech App',
-        subline: 'Мобильное приложение для инвестиций',
-        image: 'assets/case-2.png',
+        title: 'Расписание интервьюера',
+        subline: 'Яндекс Эйчартех 2025',
+        image: 'assets/case-interviewer-schedule.png',
         mediaType: 'image',
-        height: '480px'
+        height: 'auto'
     },
     {
-        title: 'Nexus Landing',
-        subline: 'Корпоративный сайт для технологической компании',
-        image: 'assets/case-3.png',
+        title: 'Поповер назначенной секции',
+        subline: 'Расписание интервьюера · Яндекс Эйчартех',
+        image: 'assets/case-assigned-section-popover.png',
         mediaType: 'image',
-        height: '420px'
+        height: 'auto',
+        aspectRatio: '74 / 69'
     }
 ];
 
@@ -189,10 +190,16 @@ function renderFooter() {
 // ============================================================
 // renderProjects — injects case cards (index.html only)
 // ============================================================
-function renderProjectCard(project) {
+function renderProjectCard(project, index) {
+    const mediaStyle = project.aspectRatio
+        ? ` style="aspect-ratio: ${project.aspectRatio};"`
+        : project.height === 'auto'
+            ? ''
+            : ` style="height: ${project.height};"`;
+
     return `
-        <div class="case-card">
-            <div class="case-card__media" style="height: ${project.height};">
+        <div class="case-card" role="button" tabindex="0" data-project-index="${index}" aria-label="Открыть кейс ${project.title}">
+            <div class="case-card__media"${mediaStyle}>
                 ${project.mediaType === 'video'
                     ? `<video src="${project.image}" aria-label="${project.title}" autoplay muted loop playsinline></video>`
                     : `<img src="${project.image}" alt="${project.title}">`}
@@ -218,12 +225,12 @@ function renderProjects() {
 
     const columns = [[], []];
     projects.forEach((project, index) => {
-        columns[index % 2].push(project);
+        columns[index % 2].push({ project, index });
     });
 
     grid.innerHTML = columns.map(column => `
         <div class="projects-column">
-            ${column.map(renderProjectCard).join('')}
+            ${column.map(({ project, index }) => renderProjectCard(project, index)).join('')}
         </div>
     `).join('');
 }
@@ -233,6 +240,201 @@ function bindHeroLinks() {
     if (!telegramLink) return;
 
     telegramLink.href = getContactUrl('Telegram');
+}
+
+function createProjectMedia(project) {
+    if (project.mediaType === 'video') {
+        const video = document.createElement('video');
+        video.src = project.image;
+        video.setAttribute('aria-label', project.title);
+        video.autoplay = true;
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        return video;
+    }
+
+    const image = document.createElement('img');
+    image.src = project.image;
+    image.alt = project.title;
+    return image;
+}
+
+function createCloseIcon() {
+    return `
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M2 2L14 14M14 2L2 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+    `;
+}
+
+function getProjectAspectValue(project) {
+    if (!project.aspectRatio) return 4 / 3;
+
+    const [width, height] = project.aspectRatio.split('/').map(Number);
+    return width && height ? width / height : 4 / 3;
+}
+
+function getProjectMaxWidth(project) {
+    const viewerChromeHeight = window.matchMedia('(min-width: 700px)').matches ? 112 : 104;
+    const maxWidthByHeight = (window.innerHeight - viewerChromeHeight) * getProjectAspectValue(project);
+    return Math.max(240, Math.min(1280, maxWidthByHeight));
+}
+
+function openCaseViewer(card) {
+    if (document.querySelector('.case-viewer')) return;
+
+    const project = projects[Number(card.dataset.projectIndex)];
+    const sourceMedia = card.querySelector('.case-card__media');
+    if (!project || !sourceMedia) return;
+
+    const sourceRect = sourceMedia.getBoundingClientRect();
+    const viewer = document.createElement('div');
+    viewer.className = 'case-viewer';
+    viewer.setAttribute('role', 'dialog');
+    viewer.setAttribute('aria-modal', 'true');
+    viewer.setAttribute('aria-label', project.title);
+
+    viewer.innerHTML = `
+        <header class="case-viewer__header">
+            <div class="case-viewer__spacer" aria-hidden="true"></div>
+            <div class="case-viewer__title-group">
+                <h2 class="case-viewer__title ui-body-l">${project.title}</h2>
+                <p class="case-viewer__subline ui-body-s">${project.subline}</p>
+            </div>
+            <button class="case-viewer__close" type="button" aria-label="Закрыть">${createCloseIcon()}</button>
+        </header>
+        <div class="case-viewer__stage">
+            <div class="case-viewer__media-shell"></div>
+        </div>
+    `;
+
+    const mediaShell = viewer.querySelector('.case-viewer__media-shell');
+    const closeButton = viewer.querySelector('.case-viewer__close');
+    const header = viewer.querySelector('.case-viewer__header');
+
+    if (project.aspectRatio) {
+        mediaShell.style.aspectRatio = project.aspectRatio;
+    } else if (project.height === 'auto') {
+        mediaShell.style.aspectRatio = '4 / 3';
+    }
+    mediaShell.style.setProperty('--case-max-width', `${getProjectMaxWidth(project)}px`);
+
+    mediaShell.append(createProjectMedia(project));
+    document.body.append(viewer);
+    document.body.classList.add('case-viewer-open');
+    closeButton.focus();
+
+    const targetRect = mediaShell.getBoundingClientRect();
+    const startTransform = `translate(${sourceRect.left - targetRect.left}px, ${sourceRect.top - targetRect.top}px) scale(${sourceRect.width / targetRect.width}, ${sourceRect.height / targetRect.height})`;
+    const animationOptions = {
+        duration: 420,
+        easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
+        fill: 'both'
+    };
+
+    viewer.animate([
+        { opacity: 0 },
+        { opacity: 1 }
+    ], {
+        duration: 180,
+        easing: 'ease-out',
+        fill: 'both'
+    });
+
+    header.animate([
+        { opacity: 0, transform: 'translateY(-8px)' },
+        { opacity: 1, transform: 'translateY(0)' }
+    ], {
+        duration: 220,
+        delay: 120,
+        easing: 'ease-out',
+        fill: 'both'
+    });
+
+    mediaShell.animate([
+        { transform: startTransform },
+        { transform: 'translate(0, 0) scale(1)' }
+    ], animationOptions);
+
+    const closeViewer = () => closeCaseViewer(viewer, card);
+    closeButton.addEventListener('click', closeViewer);
+    viewer.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeViewer();
+    });
+}
+
+function closeCaseViewer(viewer, card) {
+    if (viewer.classList.contains('is-closing')) return;
+
+    const mediaShell = viewer.querySelector('.case-viewer__media-shell');
+    const header = viewer.querySelector('.case-viewer__header');
+    const sourceMedia = card.querySelector('.case-card__media');
+    if (!mediaShell || !sourceMedia) {
+        viewer.remove();
+        document.body.classList.remove('case-viewer-open');
+        return;
+    }
+
+    const sourceRect = sourceMedia.getBoundingClientRect();
+    const targetRect = mediaShell.getBoundingClientRect();
+    const endTransform = `translate(${sourceRect.left - targetRect.left}px, ${sourceRect.top - targetRect.top}px) scale(${sourceRect.width / targetRect.width}, ${sourceRect.height / targetRect.height})`;
+
+    viewer.classList.add('is-closing');
+    header.animate([
+        { opacity: 1, transform: 'translateY(0)' },
+        { opacity: 0, transform: 'translateY(-8px)' }
+    ], {
+        duration: 160,
+        easing: 'ease-in',
+        fill: 'both'
+    });
+
+    viewer.animate([
+        { opacity: 1 },
+        { opacity: 0 }
+    ], {
+        duration: 220,
+        delay: 120,
+        easing: 'ease-in',
+        fill: 'both'
+    });
+
+    const mediaAnimation = mediaShell.animate([
+        { transform: 'translate(0, 0) scale(1)' },
+        { transform: endTransform }
+    ], {
+        duration: 360,
+        easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
+        fill: 'both'
+    });
+
+    mediaAnimation.addEventListener('finish', () => {
+        viewer.remove();
+        document.body.classList.remove('case-viewer-open');
+        card.focus();
+    }, { once: true });
+}
+
+function bindCaseViewer() {
+    const grid = document.getElementById('projects-grid');
+    if (!grid) return;
+
+    grid.addEventListener('click', (event) => {
+        const card = event.target.closest('.case-card');
+        if (!card) return;
+        openCaseViewer(card);
+    });
+
+    grid.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+
+        const card = event.target.closest('.case-card');
+        if (!card) return;
+
+        event.preventDefault();
+        openCaseViewer(card);
+    });
 }
 
 // ============================================================
@@ -246,6 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTools();
     renderFooter();
     bindHeroLinks();
+    bindCaseViewer();
 
     // Contact Popover — runs after renderNav() so element exists
     const popover = document.getElementById('contact-popover');
@@ -262,5 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    window.addEventListener('resize', renderProjects);
+    window.addEventListener('resize', () => {
+        if (!document.querySelector('.case-viewer')) renderProjects();
+    });
 });
