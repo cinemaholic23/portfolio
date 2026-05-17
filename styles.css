@@ -663,6 +663,7 @@ body.case-viewer-open {
 }
 
 .case-viewer__subline {
+    display: none;
     max-width: 100%;
     color: var(--text-secondary);
     margin-top: 4px !important;
@@ -784,6 +785,10 @@ body.case-viewer-open {
 
     .case-viewer__stage {
         padding: 0 24px 24px;
+    }
+
+    .case-viewer__subline {
+        display: block;
     }
 
 }

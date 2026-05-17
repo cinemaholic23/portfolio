@@ -330,7 +330,7 @@ function openCaseViewer(card) {
     const targetRect = mediaShell.getBoundingClientRect();
     const startTransform = `translate(${sourceRect.left - targetRect.left}px, ${sourceRect.top - targetRect.top}px) scale(${sourceRect.width / targetRect.width}, ${sourceRect.height / targetRect.height})`;
     const animationOptions = {
-        duration: 420,
+        duration: 400,
         easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
         fill: 'both'
     };
@@ -410,7 +410,7 @@ function closeCaseViewer(viewer, card) {
         { transform: 'translate(0, 0) scale(1)' },
         { transform: endTransform }
     ], {
-        duration: 360,
+        duration: 400,
         easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
         fill: 'both'
     });
