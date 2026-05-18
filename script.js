@@ -23,19 +23,32 @@ const projects = [
         height: '400px'
     },
     {
-        title: 'Расписание интервьюера',
-        subline: 'Яндекс Эйчартех 2025',
-        image: 'assets/case-interviewer-schedule.png',
-        mediaType: 'image',
-        height: 'auto'
+        title: 'Анимация лайка',
+        subline: 'Навыки в профиле сотрудника · Яндекс Эйчартех 2025',
+        image: 'assets/case-like-animation.mp4',
+        mediaType: 'video',
+        height: '400px'
     },
     {
-        title: 'Поповер назначенной секции',
-        subline: 'Расписание интервьюера · Яндекс Эйчартех',
-        image: 'assets/case-assigned-section-popover.png',
-        mediaType: 'image',
-        height: 'auto',
-        aspectRatio: '74 / 69'
+        title: 'Головоломус',
+        subline: 'Хакатон · Яндекс Эйчартех 2024',
+        image: 'assets/case-golovolomus.mp4',
+        mediaType: 'video',
+        height: '400px'
+    },
+    {
+        title: 'Краткий пересказ письма',
+        subline: 'Mail.ru 2023',
+        image: 'assets/case-mail-summary.mp4',
+        mediaType: 'video',
+        height: '400px'
+    },
+    {
+        title: 'Поп-овер в колокольчике',
+        subline: 'Повышение видимости блога · Mail.ru 2023',
+        image: 'assets/case-bell-popover.mp4',
+        mediaType: 'video',
+        height: '400px'
     }
 ];
 
@@ -262,6 +275,63 @@ function createProjectMedia(project) {
     return image;
 }
 
+function setVideoTime(video, time) {
+    if (!video || !Number.isFinite(time)) return;
+
+    const applyTime = () => {
+        try {
+            video.currentTime = time;
+        } catch {
+            // Some browsers reject seeking until the video metadata is ready.
+        }
+    };
+
+    if (video.readyState >= 1) {
+        applyTime();
+    } else {
+        video.addEventListener('loadedmetadata', applyTime, { once: true });
+    }
+}
+
+function playVideo(video) {
+    const playback = video.play();
+    if (playback) playback.catch(() => {});
+}
+
+function syncViewerVideoFromCard(sourceVideo, viewerVideo) {
+    if (!sourceVideo || !viewerVideo) return;
+
+    const sourceWasPaused = sourceVideo.paused;
+    viewerVideo.dataset.sourceWasPaused = String(sourceWasPaused);
+    setVideoTime(viewerVideo, sourceVideo.currentTime);
+
+    if (sourceWasPaused) {
+        viewerVideo.pause();
+        return;
+    }
+
+    sourceVideo.pause();
+    if (viewerVideo.readyState >= 2) {
+        playVideo(viewerVideo);
+    } else {
+        viewerVideo.addEventListener('canplay', () => playVideo(viewerVideo), { once: true });
+    }
+}
+
+function syncCardVideoFromViewer(viewer, card) {
+    const viewerVideo = viewer.querySelector('.case-viewer__media-shell video');
+    const sourceVideo = card.querySelector('.case-card__media video');
+    if (!viewerVideo || !sourceVideo) return;
+
+    setVideoTime(sourceVideo, viewerVideo.currentTime);
+
+    if (viewerVideo.dataset.sourceWasPaused === 'true') {
+        sourceVideo.pause();
+    } else {
+        playVideo(sourceVideo);
+    }
+}
+
 function createCloseIcon() {
     return `
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -322,9 +392,11 @@ function openCaseViewer(card) {
     }
     mediaShell.style.setProperty('--case-max-width', `${getProjectMaxWidth(project)}px`);
 
-    mediaShell.append(createProjectMedia(project));
+    const viewerMedia = createProjectMedia(project);
+    mediaShell.append(viewerMedia);
     document.body.append(viewer);
     document.body.classList.add('case-viewer-open');
+    syncViewerVideoFromCard(sourceMedia.querySelector('video'), viewerMedia);
     closeButton.focus();
 
     const targetRect = mediaShell.getBoundingClientRect();
@@ -416,6 +488,7 @@ function closeCaseViewer(viewer, card) {
     });
 
     mediaAnimation.addEventListener('finish', () => {
+        syncCardVideoFromViewer(viewer, card);
         viewer.remove();
         document.body.classList.remove('case-viewer-open');
         if (pendingProjectsRender) {
