@@ -442,6 +442,9 @@ body.case-viewer-open {
 }
 
 .ui-badge-card {
+    --badge-tilt-x: 0deg;
+    --badge-tilt-y: 0deg;
+
     display: flex;
     width: 100%;
     padding: 8px 16px 32px 16px;
@@ -457,6 +460,10 @@ body.case-viewer-open {
     position: relative;
     z-index: 1;
     margin-top: -12px;
+    overflow: hidden;
+    transform: perspective(1000px) rotateX(var(--badge-tilt-x)) rotateY(var(--badge-tilt-y)) scale(var(--badge-tilt-scale, 1));
+    transform-style: preserve-3d;
+    will-change: transform;
 }
 
 .ui-badge-card::before {

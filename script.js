@@ -538,6 +538,70 @@ function bindProjectsBreakpoint() {
     }
 }
 
+function bindBadgeTilt() {
+    const badge = document.querySelector('.ui-badge-card');
+    const canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!badge || !canHover || reduceMotion) return;
+
+    const tiltLimit = 16;
+    const state = {
+        x: 0,
+        y: 0,
+        scale: 1,
+        targetX: 0,
+        targetY: 0,
+        targetScale: 1
+    };
+    let animationFrame;
+
+    const applyTilt = () => {
+        state.x += (state.targetX - state.x) * 0.16;
+        state.y += (state.targetY - state.y) * 0.16;
+        state.scale += (state.targetScale - state.scale) * 0.16;
+
+        badge.style.setProperty('--badge-tilt-x', `${state.x.toFixed(2)}deg`);
+        badge.style.setProperty('--badge-tilt-y', `${state.y.toFixed(2)}deg`);
+        badge.style.setProperty('--badge-tilt-scale', state.scale.toFixed(3));
+
+        const isSettled = Math.abs(state.targetX - state.x) < 0.01 &&
+            Math.abs(state.targetY - state.y) < 0.01 &&
+            Math.abs(state.targetScale - state.scale) < 0.001;
+
+        if (!isSettled) {
+            animationFrame = window.requestAnimationFrame(applyTilt);
+        } else {
+            animationFrame = undefined;
+        }
+    };
+
+    const scheduleTilt = () => {
+        if (!animationFrame) {
+            animationFrame = window.requestAnimationFrame(applyTilt);
+        }
+    };
+
+    const resetTilt = () => {
+        state.targetX = 0;
+        state.targetY = 0;
+        state.targetScale = 1;
+        scheduleTilt();
+    };
+
+    badge.addEventListener('pointermove', (event) => {
+        const rect = badge.getBoundingClientRect();
+        const x = (event.clientX - rect.left) / rect.width;
+        const y = (event.clientY - rect.top) / rect.height;
+        state.targetX = (0.5 - y) * tiltLimit;
+        state.targetY = (x - 0.5) * tiltLimit;
+        state.targetScale = 1.02;
+
+        scheduleTilt();
+    });
+
+    badge.addEventListener('pointerleave', resetTilt);
+}
+
 // ============================================================
 // Boot
 // ============================================================
@@ -551,6 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
     bindHeroLinks();
     bindCaseViewer();
     bindProjectsBreakpoint();
+    bindBadgeTilt();
 
     // Contact Popover — runs after renderNav() so element exists
     const popover = document.getElementById('contact-popover');
